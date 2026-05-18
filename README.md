@@ -1,2 +1,245 @@
 # Banco-de-dados-
 Um projeto de banco de dados é o planejamento da estrutura de armazenamento de dados em um sistema. Ele inclui levantamento de requisitos, modelagem conceitual, lógica e física, além da implementação e testes. Seu objetivo é organizar os dados, evitar redundância e garantir eficiência, segurança e facilidade de acesso às informações.
+import json
+import os
+from datetime import datetime
+
+ARQUIVO = "banco_dados.json"
+
+
+# ============================================================
+# UTILITÁRIOS
+# ============================================================
+
+def carregar():
+    if not os.path.exists(ARQUIVO):
+        return {
+            "usuarios": {},
+            "contas": {},
+            "transacoes": []
+        }
+
+    with open(ARQUIVO, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def salvar(dados):
+    with open(ARQUIVO, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=4, ensure_ascii=False)
+
+
+def agora():
+    return str(datetime.now())
+
+
+# ============================================================
+# SISTEMA BANCÁRIO
+# ============================================================
+
+class Banco:
+
+    def __init__(self):
+        self.dados = carregar()
+
+    # ---------------- USUÁRIO ----------------
+
+    def criar_usuario(self):
+        cpf = input("CPF: ")
+
+        if cpf in self.dados["usuarios"]:
+            print("Usuário já existe.")
+            return
+
+        nome = input("Nome: ")
+
+        self.dados["usuarios"][cpf] = {
+            "nome": nome
+        }
+
+        # cria conta automaticamente
+        self.dados["contas"][cpf] = {
+            "saldo": 0,
+            "limite": 500
+        }
+
+        salvar(self.dados)
+        print("Usuário e conta criados!")
+
+    # ---------------- DEPÓSITO ----------------
+
+    def depositar(self):
+        cpf = input("CPF: ")
+
+        if cpf not in self.dados["contas"]:
+            print("Conta não encontrada.")
+            return
+
+        valor = float(input("Valor depósito: "))
+
+        if valor <= 0:
+            print("Valor inválido.")
+            return
+
+        self.dados["contas"][cpf]["saldo"] += valor
+
+        self.dados["transacoes"].append({
+            "tipo": "DEPÓSITO",
+            "cpf": cpf,
+            "valor": valor,
+            "data": agora()
+        })
+
+        salvar(self.dados)
+        print("Depósito realizado!")
+
+    # ---------------- SAQUE ----------------
+
+    def sacar(self):
+        cpf = input("CPF: ")
+
+        if cpf not in self.dados["contas"]:
+            print("Conta não encontrada.")
+            return
+
+        valor = float(input("Valor saque: "))
+
+        conta = self.dados["contas"][cpf]
+
+        if valor <= 0:
+            print("Valor inválido.")
+            return
+
+        if valor > conta["saldo"] + conta["limite"]:
+            print("Saldo insuficiente.")
+            return
+
+        conta["saldo"] -= valor
+
+        self.dados["transacoes"].append({
+            "tipo": "SAQUE",
+            "cpf": cpf,
+            "valor": valor,
+            "data": agora()
+        })
+
+        salvar(self.dados)
+        print("Saque realizado!")
+
+    # ---------------- TRANSFERÊNCIA ----------------
+
+    def transferir(self):
+        origem = input("CPF origem: ")
+        destino = input("CPF destino: ")
+
+        if origem not in self.dados["contas"] or destino not in self.dados["contas"]:
+            print("Conta inválida.")
+            return
+
+        valor = float(input("Valor transferência: "))
+
+        if valor <= 0:
+            print("Valor inválido.")
+            return
+
+        conta_origem = self.dados["contas"][origem]
+
+        if valor > conta_origem["saldo"] + conta_origem["limite"]:
+            print("Saldo insuficiente.")
+            return
+
+        conta_origem["saldo"] -= valor
+        self.dados["contas"][destino]["saldo"] += valor
+
+        self.dados["transacoes"].append({
+            "tipo": "TRANSFERÊNCIA",
+            "de": origem,
+            "para": destino,
+            "valor": valor,
+            "data": agora()
+        })
+
+        salvar(self.dados)
+        print("Transferência realizada!")
+
+    # ---------------- EXTRATO ----------------
+
+    def extrato(self):
+        cpf = input("CPF: ")
+
+        print("\n=== EXTRATO ===")
+
+        for t in self.dados["transacoes"]:
+            if t.get("cpf") == cpf or t.get("de") == cpf or t.get("para") == cpf:
+                print(t)
+
+    # ---------------- SALDO ----------------
+
+    def saldo(self):
+        cpf = input("CPF: ")
+
+        if cpf not in self.dados["contas"]:
+            print("Conta não encontrada.")
+            return
+
+        conta = self.dados["contas"][cpf]
+
+        print(f"Saldo: R$ {conta['saldo']:.2f}")
+        print(f"Limite: R$ {conta['limite']:.2f}")
+
+    # ---------------- LISTAR CONTAS ----------------
+
+    def listar_contas(self):
+        print("\n=== CONTAS ===")
+
+        for cpf, conta in self.dados["contas"].items():
+            nome = self.dados["usuarios"][cpf]["nome"]
+            print(f"{nome} | CPF: {cpf} | Saldo: R$ {conta['saldo']:.2f}")
+
+    # ---------------- MENU ----------------
+
+    def menu(self):
+
+        while True:
+            print("""
+=========================
+     BANCO DIGITAL
+=========================
+
+1 - Criar usuário/conta
+2 - Depósito
+3 - Saque
+4 - Transferência
+5 - Extrato
+6 - Saldo
+7 - Listar contas
+0 - Sair
+""")
+
+            op = input("Escolha: ")
+
+            if op == "1":
+                self.criar_usuario()
+            elif op == "2":
+                self.depositar()
+            elif op == "3":
+                self.sacar()
+            elif op == "4":
+                self.transferir()
+            elif op == "5":
+                self.extrato()
+            elif op == "6":
+                self.saldo()
+            elif op == "7":
+                self.listar_contas()
+            elif op == "0":
+                break
+            else:
+                print("Opção inválida.")
+
+
+# ============================================================
+# EXECUÇÃO
+# ============================================================
+
+if __name__ == "__main__":
+    Banco().menu()
