@@ -1,0 +1,105 @@
+-- =========================================================
+-- BANCO DE DADOS: LOJA VIRTUAL COMPLETA
+-- =========================================================
+
+CREATE DATABASE loja_virtual;
+USE loja_virtual;
+
+-- =========================================================
+-- TABELA CLIENTES
+-- =========================================================
+CREATE TABLE clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    cpf VARCHAR(14) UNIQUE NOT NULL,
+    data_cadastro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================================================
+-- TABELA PRODUTOS
+-- =========================================================
+CREATE TABLE produtos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    preco DECIMAL(10,2) NOT NULL,
+    estoque INT NOT NULL
+);
+
+-- =========================================================
+-- TABELA PEDIDOS
+-- =========================================================
+CREATE TABLE pedidos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    cliente_id INT,
+    data_pedido TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    total DECIMAL(10,2),
+
+    FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+);
+
+-- =========================================================
+-- TABELA ITENS DO PEDIDO
+-- =========================================================
+CREATE TABLE itens_pedido (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    pedido_id INT,
+    produto_id INT,
+    quantidade INT,
+    subtotal DECIMAL(10,2),
+
+    FOREIGN KEY (pedido_id) REFERENCES pedidos(id),
+    FOREIGN KEY (produto_id) REFERENCES produtos(id)
+);
+
+-- =========================================================
+-- TABELA CAIXA (MOVIMENTAÇÃO FINANCEIRA)
+-- =========================================================
+CREATE TABLE caixa (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    valor DECIMAL(10,2),
+    tipo VARCHAR(20),
+    descricao VARCHAR(255),
+    data_movimento TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- =========================================================
+-- EXEMPLOS DE INSERÇÃO DE DADOS
+-- =========================================================
+
+INSERT INTO clientes (nome, cpf)
+VALUES ('João Silva', '123.456.789-00');
+
+INSERT INTO produtos (nome, preco, estoque)
+VALUES ('Notebook', 3500.00, 10);
+
+INSERT INTO pedidos (cliente_id, total)
+VALUES (1, 3500.00);
+
+INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, subtotal)
+VALUES (1, 1, 1, 3500.00);
+
+INSERT INTO caixa (valor, tipo, descricao)
+VALUES (3500.00, 'ENTRADA', 'Venda de notebook');
+
+-- =========================================================
+-- CONSULTAS IMPORTANTES
+-- =========================================================
+
+SELECT * FROM clientes;
+SELECT * FROM produtos;
+
+SELECT 
+    p.id AS pedido,
+    c.nome AS cliente,
+    p.total,
+    p.data_pedido
+FROM pedidos p
+JOIN clientes c ON p.cliente_id = c.id;
+
+SELECT 
+    ip.pedido_id,
+    pr.nome AS produto,
+    ip.quantidade,
+    ip.subtotal
+FROM itens_pedido ip
+JOIN produtos pr ON ip.produto_id = pr.id;
