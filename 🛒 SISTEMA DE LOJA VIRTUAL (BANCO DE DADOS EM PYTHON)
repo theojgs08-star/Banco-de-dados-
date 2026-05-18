@@ -1,0 +1,201 @@
+import json
+import os
+from datetime import datetime
+
+ARQUIVO = "loja_dados.json"
+
+
+# ============================================================
+# UTILITÁRIOS
+# ============================================================
+
+def carregar():
+    if not os.path.exists(ARQUIVO):
+        return {
+            "clientes": {},
+            "produtos": {},
+            "pedidos": [],
+            "caixa": 0
+        }
+
+    with open(ARQUIVO, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def salvar(dados):
+    with open(ARQUIVO, "w", encoding="utf-8") as f:
+        json.dump(dados, f, indent=4, ensure_ascii=False)
+
+
+def agora():
+    return str(datetime.now())
+
+
+# ============================================================
+# SISTEMA LOJA
+# ============================================================
+
+class Loja:
+
+    def __init__(self):
+        self.dados = carregar()
+
+    # ---------------- CLIENTES ----------------
+
+    def cadastrar_cliente(self):
+        cpf = input("CPF: ")
+
+        if cpf in self.dados["clientes"]:
+            print("Cliente já existe.")
+            return
+
+        nome = input("Nome: ")
+
+        self.dados["clientes"][cpf] = {
+            "nome": nome,
+            "compras": []
+        }
+
+        salvar(self.dados)
+        print("Cliente cadastrado!")
+
+    # ---------------- PRODUTOS ----------------
+
+    def cadastrar_produto(self):
+        nome = input("Nome do produto: ")
+
+        if nome in self.dados["produtos"]:
+            print("Produto já existe.")
+            return
+
+        preco = float(input("Preço: "))
+        estoque = int(input("Estoque: "))
+
+        self.dados["produtos"][nome] = {
+            "preco": preco,
+            "estoque": estoque
+        }
+
+        salvar(self.dados)
+        print("Produto cadastrado!")
+
+    def listar_produtos(self):
+        print("\n=== PRODUTOS ===")
+
+        for nome, p in self.dados["produtos"].items():
+            print(f"{nome} | R$ {p['preco']:.2f} | estoque: {p['estoque']}")
+
+    # ---------------- COMPRA ----------------
+
+    def comprar(self):
+        cpf = input("CPF cliente: ")
+
+        if cpf not in self.dados["clientes"]:
+            print("Cliente não encontrado.")
+            return
+
+        carrinho = []
+        total = 0
+
+        while True:
+            self.listar_produtos()
+            prod = input("Produto (ou 'fim'): ")
+
+            if prod == "fim":
+                break
+
+            if prod not in self.dados["produtos"]:
+                print("Produto inválido.")
+                continue
+
+            qtd = int(input("Quantidade: "))
+
+            estoque = self.dados["produtos"][prod]["estoque"]
+
+            if qtd > estoque:
+                print("Estoque insuficiente.")
+                continue
+
+            preco = self.dados["produtos"][prod]["preco"]
+
+            self.dados["produtos"][prod]["estoque"] -= qtd
+
+            carrinho.append({
+                "produto": prod,
+                "quantidade": qtd,
+                "subtotal": qtd * preco
+            })
+
+            total += qtd * preco
+
+        if total == 0:
+            print("Nenhuma compra realizada.")
+            return
+
+        self.dados["caixa"] += total
+
+        pedido = {
+            "cpf": cpf,
+            "itens": carrinho,
+            "total": total,
+            "data": agora()
+        }
+
+        self.dados["pedidos"].append(pedido)
+        self.dados["clientes"][cpf]["compras"].append(pedido)
+
+        salvar(self.dados)
+
+        print(f"\nCompra finalizada! Total: R$ {total:.2f}")
+
+    # ---------------- RELATÓRIOS ----------------
+
+    def relatorio(self):
+        print("\n=== RELATÓRIO LOJA ===")
+        print(f"Clientes: {len(self.dados['clientes'])}")
+        print(f"Produtos: {len(self.dados['produtos'])}")
+        print(f"Pedidos: {len(self.dados['pedidos'])}")
+        print(f"Caixa: R$ {self.dados['caixa']:.2f}")
+
+    # ---------------- MENU ----------------
+
+    def menu(self):
+
+        while True:
+            print("""
+=========================
+      LOJA VIRTUAL
+=========================
+
+1 - Cadastrar cliente
+2 - Cadastrar produto
+3 - Listar produtos
+4 - Comprar
+5 - Relatório
+0 - Sair
+""")
+
+            op = input("Escolha: ")
+
+            if op == "1":
+                self.cadastrar_cliente()
+            elif op == "2":
+                self.cadastrar_produto()
+            elif op == "3":
+                self.listar_produtos()
+            elif op == "4":
+                self.comprar()
+            elif op == "5":
+                self.relatorio()
+            elif op == "0":
+                break
+            else:
+                print("Opção inválida.")
+
+
+# ============================================================
+# EXECUÇÃO
+# ============================================================
+
+if __name__ == "__main__":
+    Loja().menu()
